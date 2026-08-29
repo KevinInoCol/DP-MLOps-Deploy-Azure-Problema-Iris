@@ -18,19 +18,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      # Las dependencias se instalan AQUI, no en Azure: el plan B1 (1 core /
+      # 1.75 GB) reinicia el contenedor SCM por OOM al compilar numpy+sklearn.
+      # App Service anade .python_packages/lib/site-packages al PYTHONPATH solo.
+      - name: Install dependencies into .python_packages
         run: |
-          python -m venv antenv
-          source antenv/bin/activate
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: python-app
+          include-hidden-files: true
           path: |
             .
-            !antenv/
+            !.git/
 
   deploy:
     runs-on: ubuntu-latest
