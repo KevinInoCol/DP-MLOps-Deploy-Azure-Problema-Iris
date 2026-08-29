@@ -1,35 +1,49 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: 'Build and deploy Python app to Azure Web App: proyecto-mlops-iris-ml-clasico'
+name: Build and deploy Python app to Azure Web App - proyecto-mlops-iris-ml-clasico
 
 on:
   push:
-    branches:
-    - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-    - name: Set up Python version
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.11'
-    
-    - name: Build using AppService-Build
-      uses: azure/appservice-build@v2
-      with:
-        platform: python
-        platform-version: '3.11'
-    
-    - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
-      with: 
-        app-name: 'proyecto-mlops-iris-ml-clasico'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_a718c2885e9d4f0f850e405f47533b8a }}
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m venv antenv
+          source antenv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            .
+            !antenv/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'proyecto-mlops-iris-ml-clasico'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AzureAppService_PublishProfile_a718c2885e9d4f0f850e405f47533b8a }}
